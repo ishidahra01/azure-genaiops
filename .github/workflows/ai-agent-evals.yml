@@ -31,4 +31,4 @@ jobs:
           azure-ai-project-endpoint: "https://agent-ai-servicesgkl4.services.ai.azure.com/api/projects/agent-ai-servicesgkl4-project"
           deployment-name: "gpt-4.1"
           agent-ids: "asst_ALYoZcjXx82cFGXMzlgwfh77"
-          data-path: ${{ github.workspace }}/data/eval_data.jsonl
+          data-path: ${{ github.workspace }}/data/eval_data.json
