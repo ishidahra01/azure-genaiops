@@ -22,8 +22,8 @@ jobs:
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }} 
       - name: Write evaluate config 
         run: | 
-          cat > ${{ env.GENAI_EVALS_CONFIG_PATH }} << 'EOF'
-          {
+          mkdir -p $(dirname ${{ env.GENAI_EVALS_CONFIG_PATH }})
+          echo '{
             "data": "${{ env.GENAI_EVALS_DATA_PATH }}",
             "evaluators": {
               "coherence": "CoherenceEvaluator",
@@ -36,8 +36,7 @@ jobs:
               "api_key": "${{ secrets.AZURE_OPENAI_API_KEY }}",
               "api_version": "${{ secrets.AZURE_OPENAI_API_VERSION }}"
             }
-          }
-          EOF 
+          }' > ${{ env.GENAI_EVALS_CONFIG_PATH }} 
       - name: Run AI Evaluation 
         id: run-ai-evaluation 
         uses: microsoft/genai-evals@main 
