@@ -1,93 +1,44 @@
-name: Sample Evaluate Action
-on:
-  workflow_call:
-  workflow_dispatch:
+name: Sample Evaluate Action 
+on: 
+  workflow_call: 
+  workflow_dispatch: 
 
-permissions:
-  id-token: write
-  contents: read
+permissions: 
+  id-token: write 
+  contents: read 
 
-# ワークフロー全体でステップデバッグを有効化
-env:
-  ACTIONS_STEP_DEBUG: true
-
-jobs:
-  evaluate:
-    runs-on: ubuntu-latest
-    env:
-      GENAI_EVALS_CONFIG_PATH: ${{ github.workspace }}/config/evaluate-config.json
-      GENAI_EVALS_DATA_PATH:   ${{ github.workspace }}/data/eval_data.jsonl
-      ACTION_CONFIG_PATH:      ${{ github.workspace }}/config/action-config.json
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: azure/login@v2
-        with:
-          client-id:       ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id:       ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-
-      # evaluate-config.json の作成
-      - name: Write evaluate-config.json
-        run: |
-          mkdir -p "$(dirname "${GENAI_EVALS_CONFIG_PATH}")"
-          cat << 'EOF' > "${GENAI_EVALS_CONFIG_PATH}"
-          {
-            "data": "${GENAI_EVALS_DATA_PATH}",
+jobs: 
+  evaluate: 
+    runs-on: ubuntu-latest 
+    env: 
+      GENAI_EVALS_CONFIG_PATH: ${{ github.workspace }}/config/evaluate-config.json 
+      GENAI_EVALS_DATA_PATH: ${{ github.workspace }}/data/eval_data.jsonl 
+    steps: 
+      - uses: actions/checkout@v4 
+      - uses: azure/login@v2 
+        with: 
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }} 
+      - name: Write evaluate config 
+        run: | 
+          mkdir -p $(dirname ${{ env.GENAI_EVALS_CONFIG_PATH }})
+          echo '{
+            "data": "${{ env.GENAI_EVALS_DATA_PATH }}",
             "evaluators": {
               "coherence": "CoherenceEvaluator",
-              "fluency":   "FluencyEvaluator"
+              "fluency": "FluencyEvaluator"
             },
             "ai_model_configuration": {
-              "type":            "azure_openai",
-              "azure_endpoint":  "${{ secrets.AZURE_OPENAI_ENDPOINT }}",
-              "azure_deployment":"${{ secrets.AZURE_OPENAI_CHAT_DEPLOYMENT }}",
-              "api_key":         "${{ secrets.AZURE_OPENAI_API_KEY }}",
-              "api_version":     "${{ secrets.AZURE_OPENAI_API_VERSION }}"
+              "type": "azure_openai",
+              "azure_endpoint": "${{ secrets.AZURE_OPENAI_ENDPOINT }}",
+              "azure_deployment": "${{ secrets.AZURE_OPENAI_CHAT_DEPLOYMENT }}",
+              "api_key": "${{ secrets.AZURE_OPENAI_API_KEY }}",
+              "api_version": "${{ secrets.AZURE_OPENAI_API_VERSION }}"
             }
-          }
-          EOF
-
-      # action-config.json（生ログ／出力先指定用）
-      - name: Write action-config.json
-        run: |
-          mkdir -p "$(dirname "${ACTION_CONFIG_PATH}")"
-          cat << 'EOF' > "${ACTION_CONFIG_PATH}"
-          {
-            "output_path":    "${GITHUB_WORKSPACE}/results.jsonl",
-            "show_raw_output": true
-          }
-          EOF
-
-      # デバッグ用：ワークスペースの中身を再帰的に表示
-      - name: Debug workspace layout
-        run: |
-          echo "=== PWD ==="; pwd
-          echo "=== TREE ==="; ls -R .
-
-      # デバッグ用：設定ファイルの中身を表示
-      - name: Dump config files
-        run: |
-          echo "-- evaluate-config.json --"
-          cat "${GENAI_EVALS_CONFIG_PATH}"
-          echo "-- action-config.json --"
-          cat "${ACTION_CONFIG_PATH}"
-
-      # AI 評価（CLI 実行、set -x でシェルコマンド詳細出力）
-      - name: Run AI Evaluation (verbose)
-        id: run-ai-evaluation
-        run: |
-          set -xeo pipefail
-          ai_evaluate_action \
-            --evaluate-config "${GENAI_EVALS_CONFIG_PATH}" \
-            --action-config  "${ACTION_CONFIG_PATH}" \
-            --summary        summary.md
-        # 必要ならタイムアウト延長
-        timeout-minutes: 15
-
-      # 結果ファイルの先頭数行を表示して中身を確認
-      - name: Show head of results.jsonl
-        if: always()
-        run: |
-          echo "=== RESULTS (first 20 lines) ==="
-          head -n 20 "${GITHUB_WORKSPACE}/results.jsonl" || echo "(file not found)"
+          }' > ${{ env.GENAI_EVALS_CONFIG_PATH }} 
+      - name: Run AI Evaluation 
+        id: run-ai-evaluation 
+        uses: microsoft/genai-evals@main 
+        with: 
+          evaluate-configuration: ${{ env.GENAI_EVALS_CONFIG_PATH }}
