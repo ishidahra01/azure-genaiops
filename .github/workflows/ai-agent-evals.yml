@@ -26,10 +26,10 @@ jobs:
         uses: microsoft/ai-agent-evals@v2-beta
         with:
           # Replace placeholders with values for your Azure AI Project
-          azure-ai-project-endpoint: "https://agent-ai-servicesgkl4.services.ai.azure.com/api/projects/agent-ai-servicesgkl4-project"
+          azure-ai-project-endpoint: "https://azure-ai-foundry-swe.services.ai.azure.com/api/projects/firstProject"
           deployment-name: "gpt-4.1"
           agent-ids: >-
-            asst_ALYoZcjXx82cFGXMzlgwfh77,
-            asst_cONKCExt6zPkdN3HVqVTqaIL
+            asst_UXLcNSPtytUXZY18tuBJB8NR,
+            asst_83PNm4AbaoclOQVtNvT4uBxR
           data-path: ${{ github.workspace }}/data/eval_data.json
           evaluation-result-view: all-scores
