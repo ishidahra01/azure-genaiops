@@ -1,10 +1,8 @@
 name: "AI Agent Evaluation"
 
-on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
+on: 
+  workflow_call: 
+  workflow_dispatch: 
 
 permissions:
   id-token: write
