@@ -67,6 +67,7 @@ jobs:
         DEBUG_MODE: false
       run: |
         cd apps
+        mkdir -p ../results
         python 01_azure_ai_evaluation_batch.py
     
     - name: Upload evaluation results
@@ -75,14 +76,14 @@ jobs:
       with:
         name: evaluation-results-${{ github.run_number }}
         path: |
-          apps/results/
+          results/
           apps/evaluation.log
         retention-days: 30
     
     - name: Parse and display results
       if: success()
       run: |
-        if [ -f "apps/results/evaluation_results_${{ github.run_number }}.json" ]; then
+        if [ -f "results/evaluation_results_${{ github.run_number }}.json" ]; then
           echo "## Evaluation Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Summary" >> $GITHUB_STEP_SUMMARY
@@ -90,7 +91,7 @@ jobs:
           import json
           import sys
           try:
-              with open('apps/results/evaluation_results_${{ github.run_number }}.json', 'r') as f:
+              with open('results/evaluation_results_${{ github.run_number }}.json', 'r') as f:
                   data = json.load(f)
               if 'metrics' in data:
                   print('| Metric | Value |')
@@ -111,7 +112,7 @@ jobs:
       with:
         script: |
           const fs = require('fs');
-          const path = `apps/results/evaluation_results_${{ github.run_number }}.json`;
+          const path = `results/evaluation_results_${{ github.run_number }}.json`;
           
           if (fs.existsSync(path)) {
             const results = JSON.parse(fs.readFileSync(path, 'utf8'));

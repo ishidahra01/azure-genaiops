@@ -228,6 +228,29 @@ class AzureAIEvaluator:
             if not self.validate_data_schema(df):
                 raise ValueError("Data schema validation failed")
             
+            # Ensure output directory exists if output_path is specified
+            if self.config.output_path:
+                output_path = Path(self.config.output_path)
+                
+                # If output_path is a file path, create its parent directory
+                if output_path.suffix:
+                    output_dir = output_path.parent
+                else:
+                    # If output_path is a directory path, create the directory itself
+                    output_dir = output_path
+                
+                output_dir.mkdir(parents=True, exist_ok=True)
+                logger.info(f"Ensured output directory exists: {output_dir}")
+                
+                # Also check if the Azure AI SDK expects a directory instead of a file
+                # Some versions may expect the parent directory to exist
+                if output_path.suffix:
+                    # For file paths, also ensure the directory exists
+                    actual_output_dir = output_path.parent
+                    if not actual_output_dir.exists():
+                        actual_output_dir.mkdir(parents=True, exist_ok=True)
+                        logger.info(f"Created output directory: {actual_output_dir}")
+            
             logger.info("Starting batch evaluation...")
             
             # Select evaluators for batch evaluation
