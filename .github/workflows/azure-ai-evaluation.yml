@@ -60,8 +60,8 @@ jobs:
         AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
         AZURE_OPENAI_CHAT_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_CHAT_DEPLOYMENT }}
         AZURE_OPENAI_API_VERSION: ${{ secrets.AZURE_OPENAI_API_VERSION }}
-        EVAL_DATA_PATH: ./data/eval_data.jsonl
-        OUTPUT_PATH: ./results/evaluation_results_${{ github.run_number }}.json
+        EVAL_DATA_PATH: ../data/eval_data.jsonl
+        OUTPUT_PATH: ../results/evaluation_results_${{ github.run_number }}.json
         EVALUATION_THRESHOLD: 3
         LOG_LEVEL: INFO
         DEBUG_MODE: false
