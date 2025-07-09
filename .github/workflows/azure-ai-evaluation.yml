@@ -1,0 +1,145 @@
+name: Azure AI Evaluation
+
+on:
+  # push:
+  #   branches: [ main, develop ]
+  # pull_request:
+  #   branches: [ main ]
+  workflow_dispatch:  # Allow manual trigger
+  workflow_call:
+  # schedule:
+  #   - cron: '0 2 * * *'  # Run daily at 2 AM UTC
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    env:
+      LOG_LEVEL: INFO
+      DEBUG_MODE: false
+    permissions:
+      id-token: write  # Required for Azure OIDC authentication
+      contents: read
+      issues: write    # Optional: for posting results as comments
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Azure CLI Login (OIDC)
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    
+    - name: Run Azure AI Evaluation
+      env:
+        AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
+        AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        AZURE_OPENAI_CHAT_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_CHAT_DEPLOYMENT }}
+        AZURE_OPENAI_API_VERSION: ${{ secrets.AZURE_OPENAI_API_VERSION }}
+        EVAL_DATA_PATH: ./data/eval_data.jsonl
+        OUTPUT_PATH: ./results/evaluation_results_${{ github.run_number }}.json
+        EVALUATION_THRESHOLD: 3
+        LOG_LEVEL: INFO
+        DEBUG_MODE: false
+      run: |
+        cd apps
+        python 01_azure_ai_evaluation_batch.py
+    
+    - name: Upload evaluation results
+      uses: actions/upload-artifact@v3
+      if: always()  # Upload even if evaluation fails
+      with:
+        name: evaluation-results-${{ github.run_number }}
+        path: |
+          apps/results/
+          apps/evaluation.log
+        retention-days: 30
+    
+    - name: Parse and display results
+      if: success()
+      run: |
+        if [ -f "apps/results/evaluation_results_${{ github.run_number }}.json" ]; then
+          echo "## Evaluation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Summary" >> $GITHUB_STEP_SUMMARY
+          python -c "
+          import json
+          import sys
+          try:
+              with open('apps/results/evaluation_results_${{ github.run_number }}.json', 'r') as f:
+                  data = json.load(f)
+              if 'metrics' in data:
+                  print('| Metric | Value |')
+                  print('|--------|-------|')
+                  for k, v in data['metrics'].items():
+                      if isinstance(v, (int, float)):
+                          print(f'| {k} | {v:.4f} |')
+                      else:
+                          print(f'| {k} | {v} |')
+          except Exception as e:
+              print(f'Error parsing results: {e}')
+          " >> $GITHUB_STEP_SUMMARY
+        fi
+    
+    - name: Comment on PR with results
+      if: github.event_name == 'pull_request' && success()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const path = `apps/results/evaluation_results_${{ github.run_number }}.json`;
+          
+          if (fs.existsSync(path)) {
+            const results = JSON.parse(fs.readFileSync(path, 'utf8'));
+            
+            let comment = '## 🤖 Azure AI Evaluation Results\n\n';
+            
+            if (results.metrics) {
+              comment += '### Metrics\n\n';
+              comment += '| Metric | Value |\n';
+              comment += '|--------|-------|\n';
+              
+              for (const [key, value] of Object.entries(results.metrics)) {
+                const displayValue = typeof value === 'number' ? value.toFixed(4) : value;
+                comment += `| ${key} | ${displayValue} |\n`;
+              }
+              comment += '\n';
+            }
+            
+            if (results.rows) {
+              comment += `### Summary\n- Evaluated ${results.rows.length} test cases\n`;
+            }
+            
+            comment += `\n*Evaluation completed at ${new Date().toISOString()}*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          }

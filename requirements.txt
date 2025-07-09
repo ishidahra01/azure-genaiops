@@ -1,0 +1,8 @@
+# Azure AI Evaluation SDK requirements
+azure-ai-evaluation
+python-dotenv
+pandas
+openai
+azure-identity
+azure-ai-projects
+promptflow
