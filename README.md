@@ -3,8 +3,6 @@
 [![Python](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://python.org)
 [![Azure](https://img.shields.io/badge/Azure-AI%20Services-0078d4.svg)](https://azure.microsoft.com/en-us/products/ai-services/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://github.com/hishida/azure-genaiops/actions/workflows/ai-agent-evals.yml/badge.svg)](https://github.com/hishida/azure-genaiops/actions)
-[![Code Quality](https://img.shields.io/badge/Code%20Quality-Pylint-yellow.svg)](https://pylint.org/)
 
 A collection of implementation samples and code examples for developing generative AI applications on Azure. This repository provides practical examples and reference implementations for various AI features including simple agents, evaluation frameworks, tracing, and responsible AI practices.
 
