@@ -70,7 +70,7 @@ jobs:
         python 01_azure_ai_evaluation_batch.py
     
     - name: Upload evaluation results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()  # Upload even if evaluation fails
       with:
         name: evaluation-results-${{ github.run_number }}
