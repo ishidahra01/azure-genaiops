@@ -8,7 +8,7 @@ A collection of implementation samples and code examples for developing generati
 
 ## 🚀 Sample Implementation Features
 
-### AI Agent Development Samples
+### [WIP]AI Agent Development Samples
 
 - **Simple Agents**: Sample implementations using Responses API
 - **Semantic Kernel Integration**: Example code for AI orchestration capabilities
@@ -22,7 +22,7 @@ A collection of implementation samples and code examples for developing generati
 - **Quality Metrics**: Example evaluation scripts for relevance, coherence, and safety
 - **Custom Evaluators**: Sample implementations for custom evaluation criteria
 
-### Operations & Monitoring Samples
+### [WIP]Operations & Monitoring Samples
 
 - **Tracing**: Sample code for observability and performance monitoring
 - **AI Red Teaming**: Example implementations for security testing and adversarial evaluation
