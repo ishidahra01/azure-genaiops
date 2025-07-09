@@ -83,27 +83,23 @@ jobs:
     - name: Parse and display results
       if: success()
       run: |
-        if [ -f "results/evaluation_results_${{ github.run_number }}.json" ]; then
+        RESULT_FILE="results/evaluation_results_${{ github.run_number }}.json"
+        if [ -f "$RESULT_FILE" ]; then
           echo "## Evaluation Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Summary" >> $GITHUB_STEP_SUMMARY
-          python -c "
-          import json
-          import sys
-          try:
-              with open('results/evaluation_results_${{ github.run_number }}.json', 'r') as f:
-                  data = json.load(f)
-              if 'metrics' in data:
-                  print('| Metric | Value |')
-                  print('|--------|-------|')
-                  for k, v in data['metrics'].items():
-                      if isinstance(v, (int, float)):
-                          print(f'| {k} | {v:.4f} |')
-                      else:
-                          print(f'| {k} | {v} |')
-          except Exception as e:
-              print(f'Error parsing results: {e}')
-          " >> $GITHUB_STEP_SUMMARY
+          
+          # Use jq to parse JSON and create markdown table
+          if command -v jq &> /dev/null; then
+            echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            jq -r '.metrics | to_entries[] | "| \(.key) | \(.value) |"' "$RESULT_FILE" >> $GITHUB_STEP_SUMMARY
+          else
+            # Fallback: just show the file exists
+            echo "Evaluation completed. Results saved to $RESULT_FILE" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "No results file found at $RESULT_FILE" >> $GITHUB_STEP_SUMMARY
         fi
     
     - name: Comment on PR with results
