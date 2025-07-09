@@ -345,6 +345,13 @@ class AzureAIEvaluator:
             if 'rows' in result:
                 print(f"\nEvaluated {len(result['rows'])} rows")
             
+            # Output Azure AI Foundry studio URL for GitHub Actions to pick up
+            if 'studio_url' in result:
+                studio_url = result['studio_url']
+                print(f"\nAzure AI Foundry Results: {studio_url}")
+                # Special format for GitHub Actions to parse
+                print(f"GITHUB_ACTIONS_STUDIO_URL={studio_url}")
+            
             print("\n" + "="*50)
             
         except Exception as e:

@@ -54,6 +54,7 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     
     - name: Run Azure AI Evaluation
+      id: evaluation
       env:
         AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
         AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
@@ -68,7 +69,15 @@ jobs:
       run: |
         cd apps
         mkdir -p ../results
-        python 01_azure_ai_evaluation_batch.py
+        
+        # Run evaluation and capture studio URL
+        python 01_azure_ai_evaluation_batch.py 2>&1 | tee evaluation_output.log
+        
+        # Extract studio URL from output
+        STUDIO_URL=$(grep "GITHUB_ACTIONS_STUDIO_URL=" evaluation_output.log | cut -d'=' -f2- || echo "")
+        if [ -n "$STUDIO_URL" ]; then
+          echo "studio_url=$STUDIO_URL" >> $GITHUB_OUTPUT
+        fi
     
     - name: Upload evaluation results
       uses: actions/upload-artifact@v4
@@ -84,11 +93,20 @@ jobs:
       if: success()
       run: |
         RESULT_FILE="results/evaluation_results_${{ github.run_number }}.json"
-        if [ -f "$RESULT_FILE" ]; then
-          echo "## Evaluation Results" >> $GITHUB_STEP_SUMMARY
+        STUDIO_URL="${{ steps.evaluation.outputs.studio_url }}"
+        
+        echo "## Evaluation Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Add Azure AI Foundry link if available
+        if [ -n "$STUDIO_URL" ]; then
+          echo "🔗 **[View detailed results in Azure AI Foundry]($STUDIO_URL)**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Summary" >> $GITHUB_STEP_SUMMARY
-          
+        fi
+        
+        echo "### Summary" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "$RESULT_FILE" ]; then
           # Use jq to parse JSON and create markdown table
           if command -v jq &> /dev/null; then
             echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
@@ -109,11 +127,17 @@ jobs:
         script: |
           const fs = require('fs');
           const path = `results/evaluation_results_${{ github.run_number }}.json`;
+          const studioUrl = '${{ steps.evaluation.outputs.studio_url }}';
           
           if (fs.existsSync(path)) {
             const results = JSON.parse(fs.readFileSync(path, 'utf8'));
             
             let comment = '## 🤖 Azure AI Evaluation Results\n\n';
+            
+            // Add Azure AI Foundry link if available
+            if (studioUrl) {
+              comment += `🔗 **[View detailed results in Azure AI Foundry](${studioUrl})**\n\n`;
+            }
             
             if (results.metrics) {
               comment += '### Metrics\n\n';
