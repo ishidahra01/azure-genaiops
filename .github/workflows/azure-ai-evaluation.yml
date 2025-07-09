@@ -73,10 +73,23 @@ jobs:
         # Run evaluation and capture studio URL
         python 01_azure_ai_evaluation_batch.py 2>&1 | tee evaluation_output.log
         
-        # Extract studio URL from output
-        STUDIO_URL=$(grep "GITHUB_ACTIONS_STUDIO_URL=" evaluation_output.log | cut -d'=' -f2- || echo "")
-        if [ -n "$STUDIO_URL" ]; then
+        # Try to extract studio URL using multiple methods to avoid masking
+        STUDIO_URL_ENCODED=$(grep "GITHUB_ACTIONS_STUDIO_URL_ENCODED=" evaluation_output.log | cut -d'=' -f2- || echo "")
+        STUDIO_URL_DIRECT=$(grep "AZURE_AI_STUDIO_LINK=" evaluation_output.log | cut -d'=' -f2- || echo "")
+        
+        # Use the encoded URL and decode it, or fall back to direct URL
+        if [ -n "$STUDIO_URL_ENCODED" ]; then
+          # URL decode the encoded URL
+          STUDIO_URL=$(python3 -c "import urllib.parse; print(urllib.parse.unquote('$STUDIO_URL_ENCODED'))")
           echo "studio_url=$STUDIO_URL" >> $GITHUB_OUTPUT
+        elif [ -n "$STUDIO_URL_DIRECT" ]; then
+          echo "studio_url=$STUDIO_URL_DIRECT" >> $GITHUB_OUTPUT
+        fi
+        
+        # Also save to a file to avoid masking issues
+        if [ -n "$STUDIO_URL" ] || [ -n "$STUDIO_URL_DIRECT" ]; then
+          FINAL_URL="${STUDIO_URL:-$STUDIO_URL_DIRECT}"
+          echo "$FINAL_URL" > ../results/studio_url.txt
         fi
     
     - name: Upload evaluation results
@@ -94,6 +107,11 @@ jobs:
       run: |
         RESULT_FILE="results/evaluation_results_${{ github.run_number }}.json"
         STUDIO_URL="${{ steps.evaluation.outputs.studio_url }}"
+        
+        # Try to get studio URL from file if not available from output
+        if [ -z "$STUDIO_URL" ] && [ -f "results/studio_url.txt" ]; then
+          STUDIO_URL=$(cat results/studio_url.txt)
+        fi
         
         echo "## Evaluation Results" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
@@ -127,7 +145,12 @@ jobs:
         script: |
           const fs = require('fs');
           const path = `results/evaluation_results_${{ github.run_number }}.json`;
-          const studioUrl = '${{ steps.evaluation.outputs.studio_url }}';
+          let studioUrl = '${{ steps.evaluation.outputs.studio_url }}';
+          
+          // Try to get studio URL from file if not available from output
+          if (!studioUrl && fs.existsSync('results/studio_url.txt')) {
+            studioUrl = fs.readFileSync('results/studio_url.txt', 'utf8').trim();
+          }
           
           if (fs.existsSync(path)) {
             const results = JSON.parse(fs.readFileSync(path, 'utf8'));

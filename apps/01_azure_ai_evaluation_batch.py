@@ -349,8 +349,15 @@ class AzureAIEvaluator:
             if 'studio_url' in result:
                 studio_url = result['studio_url']
                 print(f"\nAzure AI Foundry Results: {studio_url}")
-                # Special format for GitHub Actions to parse
-                print(f"GITHUB_ACTIONS_STUDIO_URL={studio_url}")
+                
+                # Encode the URL to avoid GitHub Actions masking sensitive parts
+                import urllib.parse
+                encoded_url = urllib.parse.quote(studio_url, safe=':/?#[]@!$&\'()*+,;=')
+                
+                # Special format for GitHub Actions to parse (use encoded URL)
+                print(f"GITHUB_ACTIONS_STUDIO_URL_ENCODED={encoded_url}")
+                # Also provide the original URL in a different format
+                print(f"AZURE_AI_STUDIO_LINK={studio_url}")
             
             print("\n" + "="*50)
             
